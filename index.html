@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>HTML 選択メニュー</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 50px;
+      background-color: #f0f0f0;
+    }
+    h1 {
+      margin-bottom: 40px;
+    }
+    .button-container {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+    }
+    .choice-button {
+      background-color: #007bff;
+      color: white;
+      padding: 20px 40px;
+      font-size: 18px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background-color 0.3s ease;
+    }
+    .choice-button:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <h1>表示するページを選んでください</h1>
+  <div class="button-container">
+    <a class="choice-button" href="Study-Time-RecordTK.htm">タクヤン　コブリキロボット：Study-Time-RecordTK</a>
+    <a class="choice-button" href="Study-Time-RecordJJ.htm">ヤスト：Study-Time-RecordJJ</a>
+  </div>
+</body>
+</html>
