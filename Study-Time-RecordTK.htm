@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>勉強やる気ロボットタイムレコード</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+<div id="congrats-message">祝　完全集中！</div>
+  <style>
+  body {
+    font-family: sans-serif;
+    padding: 1em;
+    background-color: #f9f9f9;
+    max-width: 500px;
+    margin: auto;
+  }
+  h1 {
+    text-align: center;
+    font-size: 1.5em;
+  }
+  small {
+    font-size: 0.7em;
+    color: #666;
+  }
+  select, button, textarea {
+    display: block;
+    width: 100%;
+    margin: 0.5em 0;
+    font-size: 16px;
+    padding: 0.5em;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+  }
+  .checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 0.5em 0;
+  }
+  .checkbox-item {
+    display: flex;
+    align-items: center;
+    background: white;
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  .checkbox-item input {
+    margin-right: 8px;
+  }
+  #timer {
+    font-size: 2em;
+    text-align: center;
+    margin: 1em 0;
+    background: #fff;
+    padding: 0.5em;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+  }
+  button {
+    background-color: #4CAF50;
+    color: white;
+    cursor: pointer;
+    border: none;
+    border-radius: 5px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  }
+  button:hover {  
+    background-color: #45a049;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+  }
+  textarea {
+    resize: vertical;
+    font-size: 18px;
+    line-height: 1.5;
+    padding: 10px;
+  }
+  label {
+    display: inline-block;
+    margin-right: 0.5em;
+  }
+  #log {
+    white-space: pre-wrap;
+    background: #eee;
+    padding: 1em;
+    border-radius: 5px;
+    margin-top: 1em;
+  }
+
+  /* モーダルウィンドウのスタイル */
+  .modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+  }
+
+  .modal-content {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    width: 80%;
+    max-width: 500px;
+  }
+
+  .modal-buttons {
+    text-align: right;
+    margin-top: 20px;
+  }
+
+  .modal-buttons button {
+    margin-left: 10px;
+  }
+#congrats-message {
+  display: none;
+  position: fixed;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 3rem;
+  font-weight: bold;
+  color: gold;
+  text-shadow: 2px 2px 5px black;
+  opacity: 0;
+  transition: opacity 1s ease-in-out;
+  z-index: 9999;
+}
+#congrats-message.show {
+  display: block;
+  opacity: 1;
+}
+
+  </style>
+</head>
+<body>
+  <h1>勉強やる気ロボットタイムレコード<br><small>Robot Time Record</small></h1>
+
+  <!-- 感想記録用モーダル -->
+  <div id="impressionModal" class="modal">
+    <div class="modal-content">
+      <h2>感想を記録しましょう</h2>
+      <div>
+        <label>感想:</label><br>
+        <label><input type="radio" name="modalImpression" value="1" checked>楽勝！</label>
+        <label><input type="radio" name="modalImpression" value="2">まあまあ</label>
+        <label><input type="radio" name="modalImpression" value="3">しんどい</label>
+      </div>
+      <textarea id="modalMemo" placeholder="自由記録（書くのは文字だけ）" rows="3"></textarea>
+      <div class="modal-buttons">
+        <button onclick="saveAndShowGraph()">記録</button>
+        <button onclick="closeModal()">キャンセル</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="timer">00:00:00.0</div>
+
+  <div>
+    <label>教科:</label><br>
+    <label><input type="radio" name="goal" value="国語" checked>国語</label>
+    <label><input type="radio" name="goal" value="算数">算数</label>
+    <label><input type="radio" name="goal" value="自由課題">自由課題</label>
+    <label><input type="radio" name="goal" value="遊び">遊び</label>
+  </div>
+
+  <div id="taskOptions">
+    <label>タスク:</label><br>
+    <div id="taskRadioGroup"></div>
+  </div>
+
+  <button onclick="startStudy()">開始/リセット</button><br>
+  <button onclick="pauseStudy()">一時停止/再開</button>
+
+  <br><br><br>
+  <button onclick="endStudy()">終了</button>
+
+  <div id="log"></div>
+
+  <div>
+    <hr> 
+  
+    <button onclick="exportCSV()">データ追加</button>
+    <input type="file" accept=".csv" onchange="importCSV(event)">
+    <button onclick="updateAnalysis()">グラフ表示</button>
+
+  </div>
+
+  <div id="analysisSection" style="display: none;">
+    <h2>記録の分析</h2>
+    <table id="taskTable" border="1">
+      <thead>
+        <tr>
+          <th>タスク名</th>
+          <th>これまでの時間（分）</th>
+        </tr>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+
+    <canvas id="chart" style="margin-bottom: 20px;"></canvas>
+
+    <div style="max-width: 300px; margin: auto;">
+      <canvas id="efficiencyChart"></canvas>
+    </div>    
+
+
+  </div>
+
+  <script>
+const efficiencyCanvas = document.getElementById('efficiencyChart');
+console.log("Efficiency Canvas:", efficiencyCanvas);
+
+
+// 保存記録のキー
+const STORAGE_KEY = "studyRecords";
+
+const taskOptions = {
+  "国語": ["本読み", "漢字練習", "国語プリント問題"],
+  "算数": ["問題集", "計算問題"],      
+  "自由課題": ["日記","プログラミング"],
+  "遊び": ["メディア"]
+};
+
+let startTime = null;
+let pauseStartTime = null;
+let pausedDurations = [];
+let timerInterval = null;
+let isPaused = false;
+let efficiencyChartInstance = null;  // 効率グラフのインスタンス変数を追加
+
+// 時間表示    
+function formatTime(ms) {
+  const totalSeconds = Math.floor(ms / 1000);
+  const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+  const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+  const seconds = String(totalSeconds % 60).padStart(2, '0');
+  const deciseconds = String(Math.floor((ms % 1000) / 100));
+  return `${hours}:${minutes}:${seconds}.${deciseconds}`;
+}
+
+// タイマー表示
+function updateTimerDisplay() {
+  if (!startTime || isPaused) return;
+  const now = new Date();
+  const pausedTotal = pausedDurations.reduce((a, b) => a + b, 0);
+  const current = now - startTime - pausedTotal;
+  document.getElementById("timer").innerText = formatTime(current);
+}
+
+// タスク更新
+function updateTasks() {
+  const goal = document.querySelector('input[name="goal"]:checked').value;
+  const taskGroup = document.getElementById("taskRadioGroup");
+  taskGroup.innerHTML = "";
+  
+  if (taskOptions[goal]) {
+    taskOptions[goal].forEach((task, index) => {
+      if (task) {
+        const label = document.createElement("label");
+        const radio = document.createElement("input");
+        radio.type = "radio";
+        radio.name = "task";
+        radio.value = task;
+        if (index === 0) radio.checked = true;
+        
+        label.appendChild(radio);
+        label.appendChild(document.createTextNode(task));
+        taskGroup.appendChild(label);
+      }
+    });
+  }
+}
+
+// ラジオボタンの変更イベントリスナーを追加
+document.querySelectorAll('input[name="goal"]').forEach(radio => {
+  radio.addEventListener('change', updateTasks);
+});
+
+window.onload = function() {
+  // メモリをクリア
+  localStorage.removeItem(STORAGE_KEY);
+  console.log("ページ読み込み時にメモリをクリアしました");
+  
+  // タスクの更新
+  updateTasks();
+};
+
+// タスク開始
+function startStudy() {
+  if (timerInterval) clearInterval(timerInterval);
+
+  startTime = new Date();
+  pausedDurations = [];
+  pauseStartTime = null;
+  isPaused = false;
+
+  document.getElementById("log").innerText = "学習開始: " + startTime.toLocaleTimeString();
+  timerInterval = setInterval(updateTimerDisplay, 100);
+}
+
+// 一時停止
+function pauseStudy() {
+  if (!pauseStartTime) {
+    pauseStartTime = new Date();
+    isPaused = true;
+    document.getElementById("log").innerText += "\n中断: " + pauseStartTime.toLocaleTimeString();
+  } else {
+    const pauseEnd = new Date();
+    const pausedMs = pauseEnd - pauseStartTime;
+    pausedDurations.push(pausedMs);
+    pauseStartTime = null;
+    isPaused = false;
+    document.getElementById("log").innerText += "\n再開: " + pauseEnd.toLocaleTimeString();
+  }
+}
+
+// モーダルを閉じる
+function closeModal() {
+  document.getElementById('impressionModal').style.display = 'none';
+}
+
+// 終了
+function endStudy() {
+  if (!startTime) {
+    alert("まだ開始していません。");
+    return;
+  }
+
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+
+  const endTime = new Date();
+  const pausedTotal = pausedDurations.reduce((a, b) => a + b, 0);
+  const totalMs = endTime - startTime;
+  const actualTime = totalMs - pausedTotal;
+
+  const formattedActualTime = formatTime(actualTime);
+  const formattedOverallTime = formatTime(totalMs);
+  const efficiency = ((actualTime / totalMs) * 100).toFixed(1);
+
+
+console.log("efficiency", efficiency+100);
+createEfficiencyChart(efficiency);
+
+
+  document.getElementById("log").innerText +=
+    `\n終了: ${endTime.toLocaleTimeString()} ` +
+    `（実時間 ${formattedActualTime}、総時間 ${formattedOverallTime}、効率 ${efficiency}%）`;
+
+  document.getElementById("timer").innerText = formattedActualTime;
+
+if (pausedTotal === 0) {
+  startConfetti(); // 紙吹雪スタート
+
+  setTimeout(() => {
+    stopConfetti(); // 5秒後に紙吹雪停止
+
+    showCongratsMessage(() => {
+      // 「祝 完全集中！」の表示が終わったらモーダル表示
+      document.getElementById('impressionModal').style.display = 'block';
+
+      // Reset startTime to prevent duplicate end
+      startTime = null;
+    });
+
+  }, 5000); // 紙吹雪5秒表示後、「祝 完全集中！」へ
+} else {
+  // 中断ありの場合はすぐモーダル
+  document.getElementById('impressionModal').style.display = 'block';
+  startTime = null;
+}
+}
+
+
+
+let confettiInterval;
+
+function startConfetti() {
+  confettiInterval = setInterval(() => {
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { y: 0.6 }
+    });
+  }, 300);
+}
+
+function stopConfetti() {
+  clearInterval(confettiInterval);
+}
+
+function showCongratsMessage(callback) {
+  const msg = document.getElementById("congrats-message");
+  msg.style.display = "block";
+  setTimeout(() => {
+    msg.classList.add("show"); // フェードイン
+
+    setTimeout(() => {
+      msg.classList.remove("show"); // フェードアウト
+
+      setTimeout(() => {
+        msg.style.display = "none";
+        if (callback) callback(); // 終了後にモーダル表示
+      }, 1000); // フェードアウト完了待ち
+    }, 2000); // 表示時間
+  }, 10); // レンダリングのための遅延
+}
+
+//円グラフを表示
+function createEfficiencyChart(efficiency) { 
+  const canvas = document.getElementById('efficiencyChart');
+  const ctx = canvas.getContext('2d');
+
+  // 既存のチャートがあれば削除（再描画に備える）
+  if (window.efficiencyChartInstance) {
+    window.efficiencyChartInstance.destroy();
+  }
+
+  // 円グラフデータを構築（効率と非効率の割合）
+  const efficient = parseFloat(efficiency);
+  const inefficient = 100 - efficient;
+
+  window.efficiencyChartInstance = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['集中時間', '中断時間'],
+      datasets: [{
+        data: [efficient, inefficient],
+        backgroundColor: ['#4CAF50', '#FF5722'],
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        title: {
+          display: true,
+          text: '今日の集中力', // ★タイトルを明示的に指定
+          font: {
+            size: 18
+          }
+        },
+        legend: {
+          position: 'bottom'
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return `${context.label}: ${context.parsed.toFixed(1)}%`;
+            }
+          }
+        }
+      },
+      cutout: '60%',
+    }
+  });
+}
+
+
+
+// 記録を保存してグラフを表示
+function saveAndShowGraph() {
+  const date = new Date();
+  const goal = document.querySelector('input[name="goal"]:checked').value;
+  const task = document.querySelector('input[name="task"]:checked').value;
+  const impression = document.querySelector('input[name="modalImpression"]:checked').value;
+  const memo = document.getElementById('modalMemo').value;
+  
+  // ログから実学習時間を取得
+  const logText = document.getElementById("log").innerText;
+  const timeMatch = logText.match(/実時間 ([\d:.]+)/);
+  const time = timeMatch ? timeMatch[1] : document.getElementById("timer").innerText;
+
+  // 開始時刻と終了時刻を取得
+  const startTimeStr = logText.match(/学習開始: ([\d:.]+)/)?.[1] || "";
+  const endTimeStr = logText.match(/終了: ([\d:.]+)/)?.[1] || "";
+
+  const record = {
+    日付: date.toLocaleDateString(),
+    開始時刻: startTimeStr,
+    終了時刻: endTimeStr,
+    目標: goal,
+    タスク: task,
+    学習時間: time,
+    感想: impression,
+    メモ: memo
+  };
+
+  // 保存処理：localStorageに蓄積
+  const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+  data.push(record);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+
+  // モーダルを閉じる
+  closeModal();
+
+  // 分析セクションを表示
+  document.getElementById('analysisSection').style.display = 'block';
+
+  // グラフと表を更新（保存したデータを使用）
+  const savedData = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+  updateTaskTable(savedData);
+  showChart();
+    //showEfficiencyChart();
+
+}
+
+// 分析領域の更新関数
+function updateAnalysis() {
+  const records = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+  if (records.length === 0) {
+    alert("記録がありません。");
+    return;
+  }
+
+  document.getElementById('analysisSection').style.display = 'block';
+  updateTaskTable(records);
+  showChart();
+  //showEfficiencyChart();
+}
+
+// 記録保存
+function saveRecord() {
+  const date = new Date();
+  const y = date.getFullYear();
+  const m = date.getMonth() + 1;
+  const d = date.getDate();
+
+  const goal = document.querySelector('input[name="goal"]:checked').value;
+  const task = document.querySelector('input[name="task"]:checked').value;
+  const impression = document.querySelector('input[name="impression"]:checked').value;
+  const memo = document.querySelector('textarea').value;
+  const log = document.getElementById("log").innerText;
+  
+  const timeMatch = log.match(/実時間 ([\d:.]+)/);
+  const time = timeMatch ? timeMatch[1] : "00:00:00.0";
+
+  const record = {
+    y, m, d,
+    goal,
+    task,
+    time,
+    impression,
+    memo
+  };
+
+  const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+  data.push(record);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  //alert("記録が保存されました！");
+}
+
+// 時間を分に変換する関数
+function timeToMinutes(t) {
+  const parts = t.split(/[:.]/).map(Number);
+  return parts[0] * 60 + parts[1] + (parts[2] || 0) / 10;
+}
+
+// 時刻差を分で返す
+function timeDiffInMinutes(start, end) {
+  const [sh, sm, ss] = start.split(":").map(Number);
+  const [eh, em, es] = end.split(":").map(Number);
+  return (eh * 60 + em + es / 60) - (sh * 60 + sm + ss / 60);
+}
+
+// 累積グラフ
+function showChart() {
+  const records = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+
+  const goals = ["国語", "算数", "自由課題", "遊び"];
+  const dataByGoal = {};
+  const allDatesSet = new Set();
+
+  // 初期化
+  goals.forEach(goal => {
+    dataByGoal[goal] = {};
+  });
+
+  // 日付・目標ごとの合計（分）を集計
+  records.forEach(r => {
+    // 日付を YYYY/MM/DD 形式に統一
+    const date = new Date(r.日付).toLocaleDateString();
+    const goal = r.目標;
+    
+    if (goals.includes(goal)) {
+      if (!dataByGoal[goal][date]) {
+        dataByGoal[goal][date] = 0;
+      }
+      dataByGoal[goal][date] += timeToMinutes(r.学習時間);
+      allDatesSet.add(date);
+    }
+  });
+
+  // 昇順で日付を並べる（古い順）
+  const sortedDates = Array.from(allDatesSet).sort((a, b) => {
+    return new Date(a) - new Date(b);
+  });
+
+  // 累積データ作成
+  const datasets = goals.map((goal, idx) => {
+    const data = [];
+    let cumulative = 0;
+    
+    sortedDates.forEach(date => {
+      const daily = dataByGoal[goal][date] || 0;
+      cumulative += daily;
+      data.push(cumulative);
+    });
+
+    return {
+      label: goal,
+      data: data,
+      borderColor: ["red", "blue", "green", "orange"][idx],
+      backgroundColor: ["rgba(255, 0, 0, 0.1)", "rgba(0, 0, 255, 0.1)", "rgba(0, 128, 0, 0.1)", "rgba(255, 165, 0, 0.1)"][idx],
+      fill: false,
+      tension: 0.2
+    };
+  });
+
+  // 既存のグラフを破棄
+  if (window.studyChart) {
+    window.studyChart.destroy();
+  }
+
+  const ctx = document.getElementById('chart').getContext('2d');
+  window.studyChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: sortedDates,
+      datasets: datasets
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: { 
+          title: { display: true, text: '日付' },
+          ticks: {
+            maxRotation: 45,
+            minRotation: 45
+          }
+        },
+        y: { title: { display: true, text: '足した時間（分）' } }
+      },
+      plugins: {
+        title: {
+          display: true,
+          text: 'いままでに記録した時間'
+        },
+        legend: {
+          display: true
+        }
+      }
+    }
+  });
+}
+
+// タスク表の更新
+function updateTaskTable(records) {
+  const taskTotals = {};
+
+  records.forEach(r => {
+    const task = r.タスク;
+    if (!taskTotals[task]) {
+      taskTotals[task] = 0;
+    }
+    taskTotals[task] += timeToMinutes(r.学習時間);
+  });
+
+  const tableBody = document.querySelector("#taskTable tbody");
+  tableBody.innerHTML = "";
+
+  Object.entries(taskTotals).forEach(([task, total]) => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${task}</td>
+      <td>${total.toFixed(2)}</td>
+    `;
+    tableBody.appendChild(row);
+  });
+}
+
+// CSVエクスポート
+function exportCSV() {
+  const records = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+  if (records.length === 0) {
+    alert("記録がありません。");
+    return;
+  }
+
+  // 既存のCSVファイルを読み込む
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.csv';
+  input.style.display = 'none';
+  document.body.appendChild(input);
+
+  input.onchange = function(e) {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const existingContent = e.target.result;
+        const header = Object.keys(records[0]).join(",");
+        const rows = records.map(r => Object.values(r).map(v => `"${v}"`).join(","));
+        
+        // 既存の内容と新しいデータを結合
+        const newContent = existingContent.trim() + "\n" + rows.join("\n");
+        
+        const blob = new Blob([newContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = file.name;
+        a.click();
+        
+        // 一時的な要素を削除
+        document.body.removeChild(input);
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  input.click();
+}
+
+// CSVインポート
+function importCSV(event) {
+  const file = event.target.files[0];
+  if (!file) {
+    alert("ファイルが選択されていません。");
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    const text = e.target.result;
+    const lines = text.trim().split("\n");
+
+    if (lines.length < 2) {
+      alert("CSVファイルにデータがありません。");
+      return;
+    }
+
+    const [headerLine, ...dataLines] = lines;
+    const headers = headerLine.split(",");
+
+    const newRecords = dataLines.map(line => {
+      const values = line.split(",").map(s => s.replace(/^"|"$/g, ""));
+      if (values.length !== headers.length) {
+        alert("CSVファイルの行に不正なデータがあります。");
+        throw new Error("不正なデータ行");
+      }
+
+      const record = {};
+      headers.forEach((h, i) => {
+        record[h] = values[i];
+      });
+      return record;
+    });
+
+    // 既存のデータを取得
+    const existingRecords = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    
+    // 新しいデータを追加
+    const combinedRecords = [...existingRecords, ...newRecords];
+    
+    // 保存
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(combinedRecords));
+    
+    // 分析セクションを表示
+    document.getElementById('analysisSection').style.display = 'block';
+    
+    // グラフと表を更新
+    updateTaskTable(combinedRecords);
+    showChart();
+
+    //alert(`${newRecords.length}件のデータを追加しました！`);
+  };
+
+  reader.onerror = function () {
+    alert("ファイルの読み込み中にエラーが発生しました。");
+  };
+
+  reader.readAsText(file);
+}
+
+</script>
+</body>
+</html>
