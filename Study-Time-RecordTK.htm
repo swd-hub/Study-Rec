@@ -186,7 +186,7 @@
   <button onclick="endStudy()">終了</button>
 
   <div id="log"></div>
-<audio id="cheer-audio" src="Cheer-Crowd02-2Mid.mp3"></audio>
+ <audio id="cheer-audio" src="Cheer-Crowd02-2Mid.mp3"></audio>
   <div>
     <hr> 
   
@@ -230,7 +230,7 @@ const taskOptions = {
   "国語": ["本読み", "漢字練習", "国語プリント問題"],
   "算数": ["問題集", "計算問題"],      
   "自由課題": ["日記","プログラミング"],
-  "遊び": ["メディア"]
+  "遊び": ["メディア","プラモデル"]
 };
 
 let startTime = null;
@@ -367,6 +367,7 @@ if (pausedTotal === 0) {
   startConfetti(); // 紙吹雪スタート
   // ここで同時に音声を鳴らす
   document.getElementById('cheer-audio').play();
+  
   setTimeout(() => {
     stopConfetti(); // 5秒後に紙吹雪停止
 
