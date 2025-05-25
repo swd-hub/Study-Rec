@@ -186,7 +186,7 @@
   <button onclick="endStudy()">終了</button>
 
   <div id="log"></div>
-
+<audio id="cheer-audio" src="Cheer-Crowd02-2(Mid).mp3"></audio>
   <div>
     <hr> 
   
@@ -365,7 +365,8 @@ createEfficiencyChart(efficiency);
 
 if (pausedTotal === 0) {
   startConfetti(); // 紙吹雪スタート
-
+  // ここで同時に音声を鳴らす
+  document.getElementById('cheer-audio').play();
   setTimeout(() => {
     stopConfetti(); // 5秒後に紙吹雪停止
 
